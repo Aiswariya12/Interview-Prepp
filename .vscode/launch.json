@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "InterviewPrepApplication",
+      "request": "launch",
+      "mainClass": "InterviewPrepApplication",
+      "projectName": "interviewprep-api"
+    },
+    {
+      "type": "java",
       "name": "Run InterviewPrep Backend",
       "request": "launch",
       "mainClass": "com.interviewprep.InterviewPrepApplication",
