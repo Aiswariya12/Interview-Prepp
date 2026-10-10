@@ -14,7 +14,7 @@ public class EmailService {
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.from:${spring.mail.username:support@interviewprep.com}}")
     private String senderEmail;
 
     public EmailService(JavaMailSender mailSender) {
