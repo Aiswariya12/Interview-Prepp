@@ -46,25 +46,8 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest req) {
         String normalizedEmail = req.getEmail() != null ? req.getEmail().trim().toLowerCase() : "";
-        Optional<User> existingOpt = userRepository.findByEmail(normalizedEmail);
-        if (existingOpt.isPresent() || userRepository.existsByEmail(req.getEmail())) {
-            User existing = existingOpt.orElseGet(() -> userRepository.findByEmail(req.getEmail()).get());
-            if (existing.isVerified()) {
-                throw new BadRequestException("Email is already registered: " + normalizedEmail);
-            } else {
-                String otp = String.format("%06d", new Random().nextInt(999999));
-                existing.setOtpCode(otp);
-                existing.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
-                
-                // Update their other details just in case
-                existing.setName(req.getName() != null && !req.getName().isBlank() ? req.getName().trim() : deriveNameFromEmail(normalizedEmail));
-                existing.setPassword(passwordEncoder.encode(req.getPassword()));
-                existing.setCollege(req.getCollege() != null && !req.getCollege().isBlank() ? req.getCollege() : "Engineering College");
-                
-                userRepository.saveAndFlush(existing);
-                emailService.sendOtpEmail(existing.getEmail(), otp);
-                return new AuthResponse(null, existing.getId(), existing.getName(), existing.getEmail(), existing.getRole().name(), "PENDING_VERIFICATION");
-            }
+        if (userRepository.existsByEmail(normalizedEmail) || (req.getEmail() != null && userRepository.existsByEmail(req.getEmail()))) {
+            throw new BadRequestException("Email is already registered: " + normalizedEmail);
         }
 
         User user = new User();
@@ -77,17 +60,16 @@ public class AuthService {
         user.setGraduationYear(req.getGraduationYear() != null ? req.getGraduationYear() : 2025);
         user.setRole(req.getRole() != null ? req.getRole() : Role.ROLE_STUDENT);
         user.setStreakDays(1);
-        user.setVerified(false);
-        
-        String otp = String.format("%06d", new Random().nextInt(999999));
-        user.setOtpCode(otp);
-        user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
+        user.setVerified(true);
 
         user = userRepository.saveAndFlush(user);
 
-        emailService.sendOtpEmail(user.getEmail(), otp);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                UserPrincipal.create(user), null, java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority(user.getRole().name()))
+        );
+        String jwt = tokenProvider.generateToken(authentication);
 
-        return new AuthResponse(null, user.getId(), user.getName(), user.getEmail(), user.getRole().name(), "PENDING_VERIFICATION");
+        return new AuthResponse(jwt, user.getId(), user.getName(), user.getEmail(), user.getRole().name(), user.getCollege());
     }
 
     @Transactional
@@ -152,7 +134,8 @@ public class AuthService {
 
         User user = existingUser.get();
         if (!user.isVerified()) {
-            throw new BadRequestException("ACCOUNT_NOT_VERIFIED");
+            user.setVerified(true);
+            userRepository.save(user);
         }
 
         // 2. Verify credentials

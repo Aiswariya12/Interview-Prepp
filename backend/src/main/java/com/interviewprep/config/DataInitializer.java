@@ -121,6 +121,14 @@ public class DataInitializer implements CommandLineRunner {
             seedSubjectNotes(subjectMap);
         }
 
+        // Ensure all registered users are verified since OTP is removed
+        userRepository.findAll().forEach(u -> {
+            if (!u.isVerified()) {
+                u.setVerified(true);
+                userRepository.save(u);
+            }
+        });
+
         logger.info("Database initialization completed. Total users: {}, subjects: {}, topics: {}, questions: {}, completed mock tests: {}, note links: {}.",
                 userRepository.count(), subjectRepository.count(), topicRepository.count(), questionRepository.count(), mockTestRepository.count(), subjectNoteRepository.count());
     }

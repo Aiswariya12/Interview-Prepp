@@ -18,6 +18,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.interviewprep.dto.VerifyOtpRequest;
+import com.interviewprep.security.UserPrincipal;
+import java.util.Random;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -27,19 +31,22 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
+    private final EmailService emailService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider) {
+                       AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
+        this.emailService = emailService;
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
         String normalizedEmail = req.getEmail() != null ? req.getEmail().trim().toLowerCase() : "";
-        if (userRepository.findByEmail(normalizedEmail).isPresent() || userRepository.existsByEmail(req.getEmail())) {
+        if (userRepository.existsByEmail(normalizedEmail) || (req.getEmail() != null && userRepository.existsByEmail(req.getEmail()))) {
             throw new BadRequestException("Email is already registered: " + normalizedEmail);
         }
 
@@ -53,16 +60,63 @@ public class AuthService {
         user.setGraduationYear(req.getGraduationYear() != null ? req.getGraduationYear() : 2025);
         user.setRole(req.getRole() != null ? req.getRole() : Role.ROLE_STUDENT);
         user.setStreakDays(1);
+        user.setVerified(true);
 
         user = userRepository.saveAndFlush(user);
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(normalizedEmail, req.getPassword())
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                UserPrincipal.create(user), null, java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority(user.getRole().name()))
         );
-
         String jwt = tokenProvider.generateToken(authentication);
 
         return new AuthResponse(jwt, user.getId(), user.getName(), user.getEmail(), user.getRole().name(), user.getCollege());
+    }
+
+    @Transactional
+    public AuthResponse verifyOtp(VerifyOtpRequest req) {
+        String email = req.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (user.isVerified()) {
+            throw new BadRequestException("User is already verified");
+        }
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(req.getOtp())) {
+            throw new BadRequestException("Invalid OTP");
+        }
+
+        if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired. Please request a new one.");
+        }
+
+        user.setVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryTime(null);
+        userRepository.saveAndFlush(user);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                UserPrincipal.create(user), null, java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority(user.getRole().name()))
+        );
+        String jwt = tokenProvider.generateToken(authentication);
+
+        return new AuthResponse(jwt, user.getId(), user.getName(), user.getEmail(), user.getRole().name(), user.getCollege());
+    }
+
+    @Transactional
+    public void resendOtp(String email) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        if (user.isVerified()) {
+            throw new BadRequestException("User is already verified");
+        }
+        
+        String otp = String.format("%06d", new Random().nextInt(999999));
+        user.setOtpCode(otp);
+        user.setOtpExpiryTime(LocalDateTime.now().plusMinutes(10));
+        userRepository.saveAndFlush(user);
+        
+        emailService.sendOtpEmail(user.getEmail(), otp);
     }
 
     @Transactional
@@ -78,6 +132,12 @@ public class AuthService {
             throw new BadRequestException("Email not registered. Please register first.");
         }
 
+        User user = existingUser.get();
+        if (!user.isVerified()) {
+            user.setVerified(true);
+            userRepository.save(user);
+        }
+
         // 2. Verify credentials
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -87,7 +147,6 @@ public class AuthService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = tokenProvider.generateToken(authentication);
 
-            User user = existingUser.get();
             return new AuthResponse(jwt, user.getId(), user.getName(), user.getEmail(), user.getRole().name(), user.getCollege());
         } catch (org.springframework.security.core.AuthenticationException e) {
             throw new BadRequestException("Password invalid. Please try again.");

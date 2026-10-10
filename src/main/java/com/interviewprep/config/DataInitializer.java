@@ -54,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
             user -> {
                 user.setPassword(passwordEncoder.encode("Aiswariya00"));
                 user.setRole(Role.ROLE_ADMIN);
+                user.setVerified(true);
                 userRepository.save(user);
                 logger.info("Verified primary admin: pradhanaiswariya1@gmail.com");
             },
@@ -63,6 +64,7 @@ public class DataInitializer implements CommandLineRunner {
                 admin.setDegree("B.Tech");
                 admin.setBranch("Computer Science & Engineering");
                 admin.setGraduationYear(2025);
+                admin.setVerified(true);
                 userRepository.save(admin);
                 logger.info("Created primary admin: pradhanaiswariya1@gmail.com");
             }
@@ -73,6 +75,7 @@ public class DataInitializer implements CommandLineRunner {
             user -> {
                 user.setPassword(passwordEncoder.encode("Admin@123"));
                 user.setRole(Role.ROLE_ADMIN);
+                user.setVerified(true);
                 userRepository.save(user);
             },
             () -> {
@@ -81,6 +84,7 @@ public class DataInitializer implements CommandLineRunner {
                 defaultAdmin.setDegree("M.Tech");
                 defaultAdmin.setBranch("Computer Science");
                 defaultAdmin.setGraduationYear(2022);
+                defaultAdmin.setVerified(true);
                 userRepository.save(defaultAdmin);
             }
         );
@@ -117,6 +121,14 @@ public class DataInitializer implements CommandLineRunner {
             seedSubjectNotes(subjectMap);
         }
 
+        // Ensure all registered users are verified since OTP is removed
+        userRepository.findAll().forEach(u -> {
+            if (!u.isVerified()) {
+                u.setVerified(true);
+                userRepository.save(u);
+            }
+        });
+
         logger.info("Database initialization completed. Total users: {}, subjects: {}, topics: {}, questions: {}, completed mock tests: {}, note links: {}.",
                 userRepository.count(), subjectRepository.count(), topicRepository.count(), questionRepository.count(), mockTestRepository.count(), subjectNoteRepository.count());
     }
@@ -129,6 +141,7 @@ public class DataInitializer implements CommandLineRunner {
             existing.setBranch(branch);
             existing.setGraduationYear(gradYear);
             existing.setStreakDays(streak);
+            existing.setVerified(true);
             return userRepository.save(existing);
         }).orElseGet(() -> {
             User s = new User(name, email, passwordEncoder.encode(rawPassword), Role.ROLE_STUDENT);
@@ -137,6 +150,7 @@ public class DataInitializer implements CommandLineRunner {
             s.setBranch(branch);
             s.setGraduationYear(gradYear);
             s.setStreakDays(streak);
+            s.setVerified(true);
             s.setLastPracticeDate(LocalDateTime.now().minusHours(10));
             s = userRepository.save(s);
 
