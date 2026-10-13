@@ -17,8 +17,6 @@ import {
   Minimize2,
   Maximize2,
   Lightbulb,
-  Settings,
-  Key,
   HelpCircle
 } from 'lucide-react';
 
@@ -40,8 +38,7 @@ export const AIChatBot = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('interviewprep_gemini_key') || '');
+  const [geminiApiKey] = useState(() => localStorage.getItem('interviewprep_gemini_key') || '');
   const [showRefreshToast, setShowRefreshToast] = useState(false);
 
   const getInitialGreeting = () => {
@@ -250,12 +247,6 @@ export const AIChatBot = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleSaveApiKey = (key) => {
-    setGeminiApiKey(key);
-    localStorage.setItem('interviewprep_gemini_key', key);
-    setShowSettings(false);
-  };
-
   // Simple Markdown renderer
   const renderFormattedText = (text) => {
     const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
@@ -430,17 +421,6 @@ export const AIChatBot = () => {
                 <span className="hidden sm:inline">Refresh</span>
               </button>
 
-              {/* SETTINGS (API Key) */}
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  showSettings ? 'bg-white/25 text-white' : 'text-indigo-200 hover:text-white hover:bg-white/10'
-                }`}
-                title="AI Settings (Optional Gemini Key)"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-
               {/* RESET POSITION */}
               <button
                 onClick={handleResetPosition}
@@ -483,41 +463,6 @@ export const AIChatBot = () => {
               <span className="text-slate-400">Ready</span>
             )}
           </div>
-
-          {/* ── SETTINGS DRAWER (Optional Gemini Key) ── */}
-          {showSettings && (
-            <div className="p-3 bg-indigo-50 border-b border-indigo-100 text-xs space-y-2 animate-in slide-in-from-top-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 flex items-center gap-1">
-                  <Key className="w-3.5 h-3.5 text-indigo-600" /> Google Gemini API Key (Optional)
-                </span>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                The chatbot works out of the box with zero setup! You can optionally paste your custom Google Gemini API key to override the default key.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="Paste Gemini API Key (e.g. AQ... or AIzaSy...)"
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs outline-none focus:border-indigo-500"
-                />
-                <button
-                  onClick={() => handleSaveApiKey(geminiApiKey)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* ── Messages Container ── */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
