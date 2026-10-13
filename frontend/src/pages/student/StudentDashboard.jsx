@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, dailyChallengeApi, subjectApi } from '../../services/api';
@@ -35,31 +35,58 @@ const StudentDashboard = () => {
   const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
-  const { data: dashboard = null, isLoading: dashLoading } = useQuery({
-    queryKey: ['student-dashboard'],
+  const {
+    data: dashboard = null,
+    isLoading: dashLoading,
+    refetch: refetchDashboard,
+  } = useQuery({
+    queryKey: ['student-dashboard', user?.id || 'current'],
     queryFn: async () => {
       const res = await analyticsApi.getStudentDashboard();
       return res.data?.data || null;
     },
+    enabled: !!user || !!localStorage.getItem('interviewprep_token'),
+    staleTime: 1000 * 30, // 30 seconds freshness
+    retry: 2,
+    refetchOnMount: true,
   });
 
-  const { data: dailyChallenge = null, isLoading: challengeLoading } = useQuery({
+  const { data: dailyChallenge = null } = useQuery({
     queryKey: ['daily-challenge'],
     queryFn: async () => {
-      const res = await dailyChallengeApi.getToday();
-      return res.data?.data || null;
+      try {
+        const res = await dailyChallengeApi.getToday();
+        return res.data?.data || null;
+      } catch (err) {
+        console.warn('Daily challenge fetch error:', err);
+        return null;
+      }
     },
+    enabled: !!user || !!localStorage.getItem('interviewprep_token'),
+    staleTime: 1000 * 60 * 5,
   });
 
-  const { data: subjects = [], isLoading: subLoading } = useQuery({
+  const { data: subjects = [] } = useQuery({
     queryKey: ['subjects'],
     queryFn: async () => {
-      const res = await subjectApi.getAllActive();
-      return res.data?.data || [];
+      try {
+        const res = await subjectApi.getAllActive();
+        return res.data?.data || [];
+      } catch (err) {
+        console.warn('Subjects fetch error:', err);
+        return [];
+      }
     },
+    staleTime: 1000 * 60 * 10,
   });
 
-  const loading = dashLoading || challengeLoading || subLoading;
+  useEffect(() => {
+    if (user?.id || localStorage.getItem('interviewprep_token')) {
+      refetchDashboard();
+    }
+  }, [user?.id, refetchDashboard]);
+
+  const loading = dashLoading && !dashboard;
 
   if (loading) {
     return <StudentDashboardSkeleton />;
