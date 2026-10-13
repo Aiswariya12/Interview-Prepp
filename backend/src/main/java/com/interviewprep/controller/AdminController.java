@@ -57,14 +57,29 @@ public class AdminController {
     @GetMapping("/students")
     @Operation(summary = "Get all registered students with interview statistics")
     public ResponseEntity<ApiResponse<List<UserDto>>> getStudents() {
-        List<UserDto> students = analyticsService.getAdminStudentsList();
+        List<UserDto> students = userRepository.findByRole(Role.ROLE_STUDENT)
+                .stream()
+                .map(u -> {
+                    UserDto dto = UserDto.fromEntity(u);
+                    long testCount = mockTestRepository.countByUserIdAndStatus(u.getId(), MockTestStatus.COMPLETED);
+                    Double avg = mockTestRepository.getAveragePercentageByUserId(u.getId());
+                    Double max = mockTestRepository.getMaxPercentageByUserId(u.getId());
+                    dto.setTotalTests((int) testCount);
+                    dto.setAverageScore(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
+                    dto.setBestScore(max != null ? Math.round(max * 10.0) / 10.0 : 0.0);
+                    return dto;
+                })
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(students));
     }
 
     @GetMapping("/interviews")
     @Operation(summary = "Get all student interviews taken across the platform")
     public ResponseEntity<ApiResponse<List<MockTestSummaryDto>>> getAllInterviews() {
-        List<MockTestSummaryDto> dtos = analyticsService.getAdminInterviewsList();
+        List<MockTest> tests = mockTestRepository.findAllByOrderByCreatedAtDesc();
+        List<MockTestSummaryDto> dtos = tests.stream()
+                .map(MockTestSummaryDto::fromEntity)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(dtos));
     }
 

@@ -5,9 +5,6 @@ import com.interviewprep.entity.*;
 import com.interviewprep.exception.BadRequestException;
 import com.interviewprep.exception.ResourceNotFoundException;
 import com.interviewprep.repository.*;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,12 +125,6 @@ public class MockTestService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "student_dashboard", allEntries = true),
-        @CacheEvict(value = "admin_dashboard", allEntries = true),
-        @CacheEvict(value = "mock_student_history", allEntries = true),
-        @CacheEvict(value = "admin_interviews", allEntries = true)
-    })
     public MockTestResultDto submitMockTest(SubmitMockRequest req) {
         User user = authService.getCurrentAuthenticatedUser();
 
@@ -228,7 +219,6 @@ public class MockTestService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "mock_test_results", key = "#testId")
     public MockTestResultDto getMockTestResult(Long testId) {
         User user = authService.getCurrentAuthenticatedUser();
         MockTest test = mockTestRepository.findById(testId)
@@ -239,7 +229,6 @@ public class MockTestService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "mock_student_history", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public List<MockTestSummaryDto> getStudentHistory() {
         User user = authService.getCurrentAuthenticatedUser();
         return mockTestRepository.findByUserIdOrderByCreatedAtDesc(user.getId())

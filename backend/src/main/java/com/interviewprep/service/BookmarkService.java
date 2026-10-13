@@ -3,11 +3,10 @@ package com.interviewprep.service;
 import com.interviewprep.entity.Bookmark;
 import com.interviewprep.entity.Question;
 import com.interviewprep.entity.User;
+import com.interviewprep.exception.BadRequestException;
 import com.interviewprep.exception.ResourceNotFoundException;
 import com.interviewprep.repository.BookmarkRepository;
 import com.interviewprep.repository.QuestionRepository;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,6 @@ public class BookmarkService {
     }
 
     @Transactional
-    @CacheEvict(value = "user_bookmarks", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public Bookmark toggleBookmark(Long questionId, String notes) {
         User user = authService.getCurrentAuthenticatedUser();
         Question question = questionRepository.findById(questionId)
@@ -48,7 +46,6 @@ public class BookmarkService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "user_bookmarks", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public List<Bookmark> getMyBookmarks() {
         User user = authService.getCurrentAuthenticatedUser();
         return bookmarkRepository.findByUserIdOrderByCreatedAtDesc(user.getId());

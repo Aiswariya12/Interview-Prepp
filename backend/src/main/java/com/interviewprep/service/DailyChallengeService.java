@@ -6,7 +6,6 @@ import com.interviewprep.entity.Subject;
 import com.interviewprep.repository.DailyChallengeRepository;
 import com.interviewprep.repository.QuestionRepository;
 import com.interviewprep.repository.SubjectRepository;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,6 @@ public class DailyChallengeService {
     }
 
     @Transactional
-    @Cacheable(value = "daily_challenge_today", key = "T(java.time.LocalDate).now().toString()")
     public DailyChallenge getOrCreateTodayChallenge() {
         LocalDate today = LocalDate.now();
         return dailyChallengeRepository.findByChallengeDate(today).orElseGet(() -> {

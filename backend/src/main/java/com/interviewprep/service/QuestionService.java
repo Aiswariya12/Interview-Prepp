@@ -10,9 +10,6 @@ import com.interviewprep.exception.ResourceNotFoundException;
 import com.interviewprep.repository.QuestionRepository;
 import com.interviewprep.repository.SubjectRepository;
 import com.interviewprep.repository.TopicRepository;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,16 +37,12 @@ public class QuestionService {
         return questionRepository.searchQuestions(subjectId, difficulty, search, pageable);
     }
 
-    @Cacheable(value = "question_by_id", key = "#id")
     public Question getQuestionById(Long id) {
         return questionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found with id: " + id));
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "admin_dashboard", allEntries = true)
-    })
     public Question createQuestion(QuestionCreateRequest req) {
         Subject subject = subjectRepository.findById(req.getSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + req.getSubjectId()));
@@ -80,10 +73,6 @@ public class QuestionService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "question_by_id", key = "#id"),
-        @CacheEvict(value = "admin_dashboard", allEntries = true)
-    })
     public Question updateQuestion(Long id, QuestionCreateRequest req) {
         Question q = getQuestionById(id);
 
@@ -120,10 +109,6 @@ public class QuestionService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "question_by_id", key = "#id"),
-        @CacheEvict(value = "admin_dashboard", allEntries = true)
-    })
     public void deleteQuestion(Long id) {
         Question q = getQuestionById(id);
         questionRepository.delete(q);
