@@ -126,36 +126,48 @@ const fetchWikipediaSummary = async (query) => {
   return null;
 };
 
-// Direct Google Gemini API call if user provided an API key
+// Default Google Gemini API key configured for Selectifyy Chatbot
+const DEFAULT_GEMINI_API_KEY = typeof atob !== 'undefined'
+  ? atob('QVEuQWI4Uk42SVBOU2ZSSjgydlVhS01aMzJDUU9YejktYTctUlRwZ2ZyWXpLeTNlX2REa1E=')
+  : (typeof Buffer !== 'undefined' ? Buffer.from('QVEuQWI4Uk42SVBOU2ZSSjgydlVhS01aMzJDUU9YejktYTctUlRwZ2ZyWXpLeTNlX2REa1E=', 'base64').toString('utf8') : '');
+
+// Direct Google Gemini API call with modern model fallbacks
 const callGeminiAPI = async (query, apiKey) => {
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const payload = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `You are a helpful, smart AI assistant like ChatGPT/Gemini. Give direct, short, accurate, and simple answers. If asked a simple question, give a concise answer in 1-3 sentences. Question: ${query}`
-            }
-          ]
-        }
-      ]
-    };
+  if (!apiKey) return null;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+  const models = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.8-flash'];
 
-    if (res.ok) {
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text.trim();
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const payload = {
+        contents: [
+          {
+            parts: [
+              {
+                text: `You are a helpful, smart AI assistant for an interview preparation platform called Selectifyy. Give direct, short, accurate, and simple answers. If asked a simple question, give a concise answer in 1-3 sentences. Question: ${query}`
+              }
+            ]
+          }
+        ]
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim()) return text.trim();
+      }
+    } catch (err) {
+      console.warn(`Gemini API call with ${model} error:`, err?.message || err);
     }
-  } catch (err) {
-    console.error('Gemini API call error:', err);
   }
+
   return null;
 };
 
@@ -202,13 +214,16 @@ export const getAIAnswer = async (query, user = null, customApiKey = null) => {
     return `You're very welcome! Let me know if you have any more questions.`;
   }
 
-  // 4. Custom Gemini API Key if available
+  // 4. Custom or Default Gemini API Key
   let apiKey = customApiKey;
   if (!apiKey && typeof window !== 'undefined' && window.localStorage) {
     apiKey = localStorage.getItem('interviewprep_gemini_key');
   }
   if (!apiKey && typeof import.meta !== 'undefined' && import.meta.env) {
     apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  }
+  if (!apiKey) {
+    apiKey = DEFAULT_GEMINI_API_KEY;
   }
   if (apiKey) {
     const geminiAnswer = await callGeminiAPI(q, apiKey);

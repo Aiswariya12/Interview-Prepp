@@ -499,14 +499,14 @@ export const AIChatBot = () => {
                 </button>
               </div>
               <p className="text-[11px] text-slate-500">
-                The chatbot works out of the box with zero setup! You can optionally paste your free Google Gemini API key to enable direct Gemini-1.5-Flash model calls.
+                The chatbot works out of the box with zero setup! You can optionally paste your custom Google Gemini API key to override the default key.
               </p>
               <div className="flex gap-2">
                 <input
                   type="password"
                   value={geminiApiKey}
                   onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="Paste Gemini API Key (AIzaSy...)"
+                  placeholder="Paste Gemini API Key (e.g. AQ... or AIzaSy...)"
                   className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs outline-none focus:border-indigo-500"
                 />
                 <button
