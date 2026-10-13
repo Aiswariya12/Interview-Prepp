@@ -249,7 +249,7 @@ const MockTestResult = () => {
           </div>
 
           {/* Donut Chart */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-3">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-4 sm:p-6 space-y-3 min-w-0 overflow-hidden">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100">
               Answer Distribution
             </h3>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, Brain, BookOpen, CheckCircle, ArrowRight, X, AlertTriangle, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,14 +8,24 @@ const AIStudyCoachModal = ({ isOpen, onClose, contextData }) => {
   const [activeTab, setActiveTab] = useState('insights');
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const weakTopics = contextData?.weakTopics || [];
   const score = contextData?.score;
   const percentage = contextData?.percentage;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[99999] overflow-y-auto overscroll-contain bg-slate-900/70 backdrop-blur-xs p-3 sm:p-4 md:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="min-h-full flex flex-col justify-center items-center">
+        <div
+          className="relative bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full m-auto shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-violet-900 p-6 text-white relative">
           <button
@@ -181,7 +192,9 @@ const AIStudyCoachModal = ({ isOpen, onClose, contextData }) => {
         </div>
       </div>
     </div>
-  );
+  </div>,
+  document.body
+);
 };
 
 export default AIStudyCoachModal;

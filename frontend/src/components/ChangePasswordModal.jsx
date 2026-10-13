@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   KeyRound,
@@ -120,14 +121,20 @@ const ChangePasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/60 backdrop-blur-xs animate-fade-in overflow-y-auto"
+      className="fixed inset-0 z-[99999] overflow-y-auto overscroll-contain bg-slate-950/70 backdrop-blur-xs p-3 sm:p-4 md:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-md my-auto bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-indigo-950/20 border border-slate-200/90 overflow-hidden animate-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)]">
+      <div className="min-h-full flex flex-col justify-center items-center">
+        <div
+          className="relative w-full max-w-md m-auto bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-indigo-950/30 border border-slate-200/90 overflow-hidden animate-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)]"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Modal Header */}
         <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -305,7 +312,9 @@ const ChangePasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
         </form>
       </div>
     </div>
-  );
+  </div>,
+  document.body
+);
 };
 
 export default ChangePasswordModal;

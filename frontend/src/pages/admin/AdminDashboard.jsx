@@ -637,7 +637,7 @@ const AdminDashboard = () => {
             {/* Graphs Grid: 2 Columns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* GRAPH 1: Subject-wise Performance & Attempts */}
-              <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover">
+              <div className="p-4 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover min-w-0 overflow-hidden">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -680,7 +680,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* GRAPH 2: Score Tier Distribution */}
-              <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover">
+              <div className="p-4 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover min-w-0 overflow-hidden">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -741,7 +741,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* GRAPH 3: Chronological Score Progression Trend */}
-              <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover lg:col-span-2">
+              <div className="p-4 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 card-hover lg:col-span-2 min-w-0 overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">

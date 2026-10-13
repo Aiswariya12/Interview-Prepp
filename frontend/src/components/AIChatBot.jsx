@@ -62,19 +62,33 @@ export const AIChatBot = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+
   const [position, setPosition] = useState(() => {
     try {
+      if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        return null;
+      }
       const saved = localStorage.getItem('interviewprep_chatbot_pos');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Only keep if coordinates are valid and not overlapping top navbar (y >= 100)
-        if (typeof parsed.x === 'number' && typeof parsed.y === 'number' && parsed.y >= 100) {
+        const winW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+        const winH = typeof window !== 'undefined' ? window.innerHeight : 800;
+        if (
+          typeof parsed.x === 'number' &&
+          typeof parsed.y === 'number' &&
+          parsed.x >= 10 &&
+          parsed.y >= 70 &&
+          parsed.x < winW - 50 &&
+          parsed.y < winH - 50
+        ) {
+          const maxX = Math.max(10, winW - 410);
+          const maxY = Math.max(70, winH - 550);
           return {
-            x: Math.min(Math.max(10, parsed.x), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 420),
-            y: Math.min(Math.max(80, parsed.y), (typeof window !== 'undefined' ? window.innerHeight : 800) - 560)
+            x: Math.min(Math.max(10, parsed.x), maxX),
+            y: Math.min(Math.max(70, parsed.y), maxY)
           };
         } else {
-          // Clear any corrupted position that was placed in the navbar
           localStorage.removeItem('interviewprep_chatbot_pos');
         }
       }
@@ -93,15 +107,24 @@ export const AIChatBot = () => {
     }
   }, [messages, isOpen, isLoading]);
 
-  // Keep inside screen boundaries on resize
+  // Keep inside screen boundaries on resize and track mobile breakpoint
   useEffect(() => {
     const handleResize = () => {
-      if (position) {
+      const mobile = window.innerWidth < 640;
+      setIsMobile(mobile);
+      if (mobile) {
+        // Clear custom coordinates so mobile stays docked neatly to viewport
+        setPosition(null);
+      } else if (position) {
         setPosition((prev) => {
           if (!prev) return null;
+          const targetWidth = isExpanded ? 640 : 400;
+          const targetHeight = isExpanded ? 720 : 540;
+          const maxX = Math.max(10, window.innerWidth - targetWidth - 10);
+          const maxY = Math.max(70, window.innerHeight - targetHeight - 10);
           return {
-            x: Math.min(Math.max(10, prev.x), window.innerWidth - (isExpanded ? 640 : 400) - 10),
-            y: Math.min(Math.max(70, prev.y), window.innerHeight - (isExpanded ? 720 : 540) - 10)
+            x: Math.min(Math.max(10, prev.x), maxX),
+            y: Math.min(Math.max(70, prev.y), maxY)
           };
         });
       }
@@ -112,6 +135,15 @@ export const AIChatBot = () => {
 
   // Save position
   const savePosition = (newPos) => {
+    if (isMobile) {
+      setPosition(null);
+      try {
+        localStorage.removeItem('interviewprep_chatbot_pos');
+      } catch (e) {
+        // ignore
+      }
+      return;
+    }
     setPosition(newPos);
     try {
       if (newPos) {
@@ -124,8 +156,9 @@ export const AIChatBot = () => {
     }
   };
 
-  // Drag handlers for open chat window
+  // Drag handlers for open chat window (desktop only)
   const handleMouseDown = (e) => {
+    if (isMobile) return;
     if (e.button !== 0 || e.target.closest('button') || e.target.closest('input')) return;
     setIsDragging(true);
     const rect = chatWindowRef.current?.getBoundingClientRect();
@@ -139,6 +172,7 @@ export const AIChatBot = () => {
   };
 
   const handleTouchStart = (e) => {
+    if (isMobile) return; // Prevent mobile touch drag from throwing window outside screen
     if (e.target.closest('button') || e.target.closest('input')) return;
     const touch = e.touches[0];
     setIsDragging(true);
@@ -153,21 +187,25 @@ export const AIChatBot = () => {
 
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if (!isDragging) return;
+      if (!isDragging || isMobile) return;
       const targetWidth = isExpanded ? 640 : 400;
       const targetHeight = isExpanded ? 700 : 540;
-      const newX = Math.min(Math.max(10, e.clientX - dragOffsetRef.current.x), window.innerWidth - targetWidth - 10);
-      const newY = Math.min(Math.max(70, e.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
+      const maxX = Math.max(10, window.innerWidth - targetWidth - 10);
+      const maxY = Math.max(70, window.innerHeight - targetHeight - 10);
+      const newX = Math.min(Math.max(10, e.clientX - dragOffsetRef.current.x), maxX);
+      const newY = Math.min(Math.max(70, e.clientY - dragOffsetRef.current.y), maxY);
       setPosition({ x: newX, y: newY });
     };
 
     const handleTouchMove = (e) => {
-      if (!isDragging) return;
+      if (!isDragging || isMobile) return;
       const touch = e.touches[0];
       const targetWidth = isExpanded ? 640 : 400;
       const targetHeight = isExpanded ? 700 : 540;
-      const newX = Math.min(Math.max(10, touch.clientX - dragOffsetRef.current.x), window.innerWidth - targetWidth - 10);
-      const newY = Math.min(Math.max(70, touch.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
+      const maxX = Math.max(10, window.innerWidth - targetWidth - 10);
+      const maxY = Math.max(70, window.innerHeight - targetHeight - 10);
+      const newX = Math.min(Math.max(10, touch.clientX - dragOffsetRef.current.x), maxX);
+      const newY = Math.min(Math.max(70, touch.clientY - dragOffsetRef.current.y), maxY);
       setPosition({ x: newX, y: newY });
     };
 
@@ -191,7 +229,7 @@ export const AIChatBot = () => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDragging, isExpanded, position]);
+  }, [isDragging, isExpanded, position, isMobile]);
 
   const handleResetPosition = () => {
     setPosition(null);
@@ -354,7 +392,7 @@ export const AIChatBot = () => {
   // ── CLOSED STATE: Floating Bot Bubble anchored at bottom-right ──
   if (!isOpen) {
     return (
-      <div className="fixed bottom-5 sm:bottom-6 right-5 sm:right-6 z-[9999] select-none">
+      <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[9999] select-none">
         <div
           className="relative group cursor-pointer"
           title="InterviewPrep AI Assistant (Click to chat)"
@@ -367,10 +405,10 @@ export const AIChatBot = () => {
 
           <button
             onClick={() => setIsOpen(true)}
-            className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-white/80 cursor-pointer"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-white/80 cursor-pointer"
             aria-label="Open AI Assistant"
           >
-            <Bot className="w-7 h-7" />
+            <Bot className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
 
           {/* Tooltip on hover */}
@@ -384,20 +422,26 @@ export const AIChatBot = () => {
   }
 
   // ── OPEN STATE: Floating Draggable Chat Window ──
-  const windowStyle = position
+  const windowStyle = isMobile
+    ? {
+        position: 'fixed',
+        left: '8px',
+        right: '8px',
+        bottom: '8px',
+        zIndex: 9999,
+      }
+    : position
     ? {
         position: 'fixed',
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: 9999,
-        touchAction: 'none'
       }
     : {
         position: 'fixed',
         right: '1.25rem',
         bottom: '1.25rem',
         zIndex: 9999,
-        touchAction: 'none'
       };
 
   return (
@@ -408,18 +452,20 @@ export const AIChatBot = () => {
     >
       <div
         style={{
-          width: isExpanded ? '640px' : '400px',
-          height: isExpanded ? '720px' : '540px',
-          maxWidth: 'calc(100vw - 20px)',
-          maxHeight: 'calc(100vh - 20px)'
+          width: isMobile ? '100%' : (isExpanded ? '640px' : '400px'),
+          height: isMobile ? 'min(580px, calc(100dvh - 16px))' : (isExpanded ? '720px' : '540px'),
+          maxWidth: isMobile ? '100%' : 'calc(100vw - 20px)',
+          maxHeight: 'calc(100dvh - 16px)'
         }}
-        className="bg-white rounded-3xl shadow-2xl border border-indigo-100/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-indigo-100/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         {/* ── Drag Header ── */}
         <div
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          className="px-4 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+          className={`px-3.5 sm:px-4 py-3 sm:py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white flex items-center justify-between select-none ${
+            isMobile ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+          }`}
         >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white border border-white/20">
@@ -462,7 +508,7 @@ export const AIChatBot = () => {
               {/* EXPAND/COLLAPSE */}
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10 transition-colors"
+                className="hidden sm:inline-flex p-1.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10 transition-colors"
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
