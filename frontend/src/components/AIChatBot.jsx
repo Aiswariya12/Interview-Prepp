@@ -56,34 +56,35 @@ export const AIChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
-  // Position state (Draggable)
-  const defaultPos = {
-    x: typeof window !== 'undefined' ? Math.max(20, window.innerWidth - 420) : 1000,
-    y: typeof window !== 'undefined' ? Math.max(40, window.innerHeight - 620) : 200
-  };
+  // Position state (Draggable for open chat window)
+  const chatWindowRef = useRef(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const [position, setPosition] = useState(() => {
     try {
       const saved = localStorage.getItem('interviewprep_chatbot_pos');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+        // Only keep if coordinates are valid and not overlapping top navbar (y >= 100)
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number' && parsed.y >= 100) {
           return {
-            x: Math.min(Math.max(10, parsed.x), window.innerWidth - 100),
-            y: Math.min(Math.max(10, parsed.y), window.innerHeight - 100)
+            x: Math.min(Math.max(10, parsed.x), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 420),
+            y: Math.min(Math.max(80, parsed.y), (typeof window !== 'undefined' ? window.innerHeight : 800) - 560)
           };
+        } else {
+          // Clear any corrupted position that was placed in the navbar
+          localStorage.removeItem('interviewprep_chatbot_pos');
         }
       }
     } catch (e) {
       // fallback
     }
-    return defaultPos;
+    return null; // null means default to fixed bottom-right corner
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -95,32 +96,44 @@ export const AIChatBot = () => {
   // Keep inside screen boundaries on resize
   useEffect(() => {
     const handleResize = () => {
-      setPosition((prev) => ({
-        x: Math.min(Math.max(10, prev.x), window.innerWidth - (isOpen ? (isExpanded ? 640 : 400) : 70)),
-        y: Math.min(Math.max(10, prev.y), window.innerHeight - (isOpen ? (isExpanded ? 720 : 540) : 70))
-      }));
+      if (position) {
+        setPosition((prev) => {
+          if (!prev) return null;
+          return {
+            x: Math.min(Math.max(10, prev.x), window.innerWidth - (isExpanded ? 640 : 400) - 10),
+            y: Math.min(Math.max(70, prev.y), window.innerHeight - (isExpanded ? 720 : 540) - 10)
+          };
+        });
+      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen, isExpanded]);
+  }, [position, isExpanded]);
 
   // Save position
   const savePosition = (newPos) => {
     setPosition(newPos);
     try {
-      localStorage.setItem('interviewprep_chatbot_pos', JSON.stringify(newPos));
+      if (newPos) {
+        localStorage.setItem('interviewprep_chatbot_pos', JSON.stringify(newPos));
+      } else {
+        localStorage.removeItem('interviewprep_chatbot_pos');
+      }
     } catch (e) {
       // ignore
     }
   };
 
-  // Drag handlers
+  // Drag handlers for open chat window
   const handleMouseDown = (e) => {
     if (e.button !== 0 || e.target.closest('button') || e.target.closest('input')) return;
     setIsDragging(true);
+    const rect = chatWindowRef.current?.getBoundingClientRect();
+    const currentX = rect ? rect.left : (window.innerWidth - (isExpanded ? 660 : 420));
+    const currentY = rect ? rect.top : (window.innerHeight - (isExpanded ? 740 : 560));
     dragOffsetRef.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
+      x: e.clientX - currentX,
+      y: e.clientY - currentY
     };
     e.preventDefault();
   };
@@ -129,29 +142,32 @@ export const AIChatBot = () => {
     if (e.target.closest('button') || e.target.closest('input')) return;
     const touch = e.touches[0];
     setIsDragging(true);
+    const rect = chatWindowRef.current?.getBoundingClientRect();
+    const currentX = rect ? rect.left : (window.innerWidth - (isExpanded ? 660 : 420));
+    const currentY = rect ? rect.top : (window.innerHeight - (isExpanded ? 740 : 560));
     dragOffsetRef.current = {
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
+      x: touch.clientX - currentX,
+      y: touch.clientY - currentY
     };
   };
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging) return;
-      const targetWidth = isOpen ? (isExpanded ? 640 : 400) : 60;
-      const targetHeight = isOpen ? (isExpanded ? 700 : 520) : 60;
+      const targetWidth = isExpanded ? 640 : 400;
+      const targetHeight = isExpanded ? 700 : 540;
       const newX = Math.min(Math.max(10, e.clientX - dragOffsetRef.current.x), window.innerWidth - targetWidth - 10);
-      const newY = Math.min(Math.max(10, e.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
+      const newY = Math.min(Math.max(70, e.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
       setPosition({ x: newX, y: newY });
     };
 
     const handleTouchMove = (e) => {
       if (!isDragging) return;
       const touch = e.touches[0];
-      const targetWidth = isOpen ? (isExpanded ? 640 : 400) : 60;
-      const targetHeight = isOpen ? (isExpanded ? 700 : 520) : 60;
+      const targetWidth = isExpanded ? 640 : 400;
+      const targetHeight = isExpanded ? 700 : 540;
       const newX = Math.min(Math.max(10, touch.clientX - dragOffsetRef.current.x), window.innerWidth - targetWidth - 10);
-      const newY = Math.min(Math.max(10, touch.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
+      const newY = Math.min(Math.max(70, touch.clientY - dragOffsetRef.current.y), window.innerHeight - targetHeight - 10);
       setPosition({ x: newX, y: newY });
     };
 
@@ -175,14 +191,15 @@ export const AIChatBot = () => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDragging, isOpen, isExpanded, position]);
+  }, [isDragging, isExpanded, position]);
 
   const handleResetPosition = () => {
-    const reset = {
-      x: Math.max(20, window.innerWidth - (isExpanded ? 660 : 420)),
-      y: Math.max(40, window.innerHeight - (isExpanded ? 720 : 560))
-    };
-    savePosition(reset);
+    setPosition(null);
+    try {
+      localStorage.removeItem('interviewprep_chatbot_pos');
+    } catch (e) {
+      // ignore
+    }
   };
 
   // Refresh Chat functionality (New Chat)
@@ -334,24 +351,13 @@ export const AIChatBot = () => {
     return null;
   }
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 9999,
-        touchAction: 'none'
-      }}
-      className="transition-shadow select-none"
-    >
-      {/* ── CLOSED STATE: Floating Draggable Bot Bubble ── */}
-      {!isOpen && (
+  // ── CLOSED STATE: Floating Bot Bubble anchored at bottom-right ──
+  if (!isOpen) {
+    return (
+      <div className="fixed bottom-5 sm:bottom-6 right-5 sm:right-6 z-[9999] select-none">
         <div
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-          className="relative group cursor-grab active:cursor-grabbing"
-          title="InterviewPrep AI Assistant (Click to open, drag to move)"
+          className="relative group cursor-pointer"
+          title="InterviewPrep AI Assistant (Click to chat)"
         >
           {/* Subtle online pulse */}
           <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 z-20">
@@ -361,7 +367,8 @@ export const AIChatBot = () => {
 
           <button
             onClick={() => setIsOpen(true)}
-            className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center hover:scale-105 transition-all duration-200 border-2 border-white/80"
+            className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-white/80 cursor-pointer"
+            aria-label="Open AI Assistant"
           >
             <Bot className="w-7 h-7" />
           </button>
@@ -370,28 +377,50 @@ export const AIChatBot = () => {
           <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-3 py-1.5 bg-slate-900/90 backdrop-blur-sm text-white text-xs font-semibold rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg border border-slate-700/50 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>AI Interview Coach</span>
-            <span className="text-[10px] text-slate-400 font-normal">(Drag to reposition)</span>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* ── OPEN STATE: Floating Draggable Chat Window ── */}
-      {isOpen && (
+  // ── OPEN STATE: Floating Draggable Chat Window ──
+  const windowStyle = position
+    ? {
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        zIndex: 9999,
+        touchAction: 'none'
+      }
+    : {
+        position: 'fixed',
+        right: '1.25rem',
+        bottom: '1.25rem',
+        zIndex: 9999,
+        touchAction: 'none'
+      };
+
+  return (
+    <div
+      ref={chatWindowRef}
+      style={windowStyle}
+      className="transition-shadow select-none"
+    >
+      <div
+        style={{
+          width: isExpanded ? '640px' : '400px',
+          height: isExpanded ? '720px' : '540px',
+          maxWidth: 'calc(100vw - 20px)',
+          maxHeight: 'calc(100vh - 20px)'
+        }}
+        className="bg-white rounded-3xl shadow-2xl border border-indigo-100/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
+        {/* ── Drag Header ── */}
         <div
-          style={{
-            width: isExpanded ? '640px' : '400px',
-            height: isExpanded ? '720px' : '540px',
-            maxWidth: 'calc(100vw - 20px)',
-            maxHeight: 'calc(100vh - 20px)'
-          }}
-          className="bg-white rounded-3xl shadow-2xl border border-indigo-100/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          className="px-4 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
         >
-          {/* ── Drag Header ── */}
-          <div
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-            className="px-4 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
-          >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white border border-white/20">
                 <Bot className="w-5 h-5" />
@@ -594,8 +623,7 @@ export const AIChatBot = () => {
             </button>
           </form>
         </div>
-      )}
-    </div>
+      </div>
   );
 };
 
