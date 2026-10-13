@@ -3,6 +3,7 @@ package com.interviewprep.service;
 import com.interviewprep.dto.*;
 import com.interviewprep.entity.*;
 import com.interviewprep.repository.*;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "student_dashboard", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName()")
     public StudentDashboardDto getStudentDashboardData() {
         User user = authService.getCurrentAuthenticatedUser();
         StudentDashboardDto dto = new StudentDashboardDto();
@@ -153,6 +155,7 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "admin_dashboard")
     public AdminDashboardDto getAdminDashboardData() {
         AdminDashboardDto dto = new AdminDashboardDto();
         dto.setTotalStudents(userRepository.countByRole(Role.ROLE_STUDENT));
@@ -176,6 +179,33 @@ public class AnalyticsService {
 
         dto.setSubjectStats(stats);
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "admin_students")
+    public List<UserDto> getAdminStudentsList() {
+        return userRepository.findByRole(Role.ROLE_STUDENT)
+                .stream()
+                .map(u -> {
+                    UserDto dto = UserDto.fromEntity(u);
+                    long testCount = mockTestRepository.countByUserIdAndStatus(u.getId(), MockTestStatus.COMPLETED);
+                    Double avg = mockTestRepository.getAveragePercentageByUserId(u.getId());
+                    Double max = mockTestRepository.getMaxPercentageByUserId(u.getId());
+                    dto.setTotalTests((int) testCount);
+                    dto.setAverageScore(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
+                    dto.setBestScore(max != null ? Math.round(max * 10.0) / 10.0 : 0.0);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "admin_interviews")
+    public List<MockTestSummaryDto> getAdminInterviewsList() {
+        List<MockTest> tests = mockTestRepository.findAllByOrderByCreatedAtDesc();
+        return tests.stream()
+                .map(MockTestSummaryDto::fromEntity)
+                .collect(Collectors.toList());
     }
 
     private String generateTopicRecommendation(String topicName, double accuracy) {
