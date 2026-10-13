@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi, subjectApi, questionApi } from '../../services/api';
 import {
   ShieldAlert,
@@ -50,12 +51,9 @@ import {
 } from 'recharts';
 
 const AdminDashboard = () => {
+  const queryClient = useQueryClient();
+
   const [activeTab, setActiveTab] = useState('interviews'); // 'interviews', 'students', 'questions', 'subjects'
-  const [stats, setStats] = useState(null);
-  const [subjects, setSubjects] = useState([]);
-  const [questions, setQuestions] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [interviews, setInterviews] = useState([]);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Interview Filters
@@ -69,7 +67,6 @@ const AdminDashboard = () => {
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
 
   // Question Modal State
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
@@ -102,47 +99,44 @@ const AdminDashboard = () => {
   const [newNote, setNewNote] = useState({ title: '', url: '', description: '' });
   const [addingNote, setAddingNote] = useState(false);
 
-  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState('');
 
-  useEffect(() => {
-    loadInitialAdminData();
-  }, []);
+  // TanStack React Query Hooks for caching and high performance
+  const { data: stats = null, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const res = await adminApi.getDashboard();
+      return res.data?.data || null;
+    },
+  });
 
-  useEffect(() => {
-    loadQuestions();
-  }, [filterSubjectId, filterDifficulty, page]);
+  const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: async () => {
+      const res = await subjectApi.getAllActive();
+      return res.data?.data || [];
+    },
+  });
 
-  const loadInitialAdminData = async () => {
-    setLoading(true);
-    try {
-      const [dashRes, subRes, stuRes, intRes] = await Promise.allSettled([
-        adminApi.getDashboard(),
-        subjectApi.getAllActive(),
-        adminApi.getStudents(),
-        adminApi.getInterviews(),
-      ]);
+  const { data: students = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ['admin-students'],
+    queryFn: async () => {
+      const res = await adminApi.getStudents();
+      return res.data?.data || [];
+    },
+  });
 
-      if (dashRes.status === 'fulfilled') setStats(dashRes.value.data.data);
-      if (subRes.status === 'fulfilled') {
-        const sList = subRes.value.data.data || [];
-        setSubjects(sList);
-        if (sList.length > 0) {
-          setSelectedSubForTopic(sList[0].id);
-          setSelectedSubForNote(sList[0].id);
-        }
-      }
-      if (stuRes.status === 'fulfilled') setStudents(stuRes.value.data.data || []);
-      if (intRes.status === 'fulfilled') setInterviews(intRes.value.data.data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: interviews = [], isLoading: interviewsLoading } = useQuery({
+    queryKey: ['admin-interviews'],
+    queryFn: async () => {
+      const res = await adminApi.getInterviews();
+      return res.data?.data || [];
+    },
+  });
 
-  const loadQuestions = async () => {
-    try {
+  const { data: questionPageData = { content: [], totalPages: 1 }, refetch: refetchQuestions } = useQuery({
+    queryKey: ['admin-questions', page, filterSubjectId, filterDifficulty],
+    queryFn: async () => {
       const params = {
         page,
         size: 8,
@@ -152,12 +146,31 @@ const AdminDashboard = () => {
       if (searchQuery) params.search = searchQuery;
 
       const res = await questionApi.getQuestions(params);
-      const pageData = res.data.data;
-      setQuestions(pageData.content || []);
-      setTotalPages(pageData.totalPages || 1);
-    } catch (err) {
-      console.error(err);
+      return res.data?.data || { content: [], totalPages: 1 };
+    },
+  });
+
+  const questions = questionPageData.content || [];
+  const totalPages = questionPageData.totalPages || 1;
+  const loading = statsLoading || subjectsLoading || studentsLoading || interviewsLoading;
+
+  useEffect(() => {
+    if (subjects.length > 0) {
+      if (!selectedSubForTopic) setSelectedSubForTopic(subjects[0].id);
+      if (!selectedSubForNote) setSelectedSubForNote(subjects[0].id);
     }
+  }, [subjects, selectedSubForTopic, selectedSubForNote]);
+
+  const loadInitialAdminData = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-students'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-interviews'] });
+  };
+
+  const loadQuestions = () => {
+    refetchQuestions();
+    queryClient.invalidateQueries({ queryKey: ['admin-questions'] });
   };
 
   // 1. Subject-wise performance and interview count for graphs
@@ -392,10 +405,7 @@ const AdminDashboard = () => {
       });
       setNewNote({ title: '', url: '', description: '' });
       showToast('Note link added successfully!');
-      const subRes = await subjectApi.getAllActive();
-      if (subRes.data?.data) {
-        setSubjects(subRes.data.data);
-      }
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to add note link');
     } finally {
@@ -408,10 +418,7 @@ const AdminDashboard = () => {
     try {
       await adminApi.deleteSubjectNote(noteId);
       showToast('Note link removed');
-      const subRes = await subjectApi.getAllActive();
-      if (subRes.data?.data) {
-        setSubjects(subRes.data.data);
-      }
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
     } catch (err) {
       alert('Failed to delete note link');
     }

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { dailyChallengeApi } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { Calendar, Flame, CheckCircle2, XCircle, Sparkles, Code, ArrowRight, RotateCcw } from 'lucide-react';
@@ -6,20 +7,17 @@ import { Link } from 'react-router-dom';
 import DailyChallengeSkeleton from '../../components/skeletons/DailyChallengeSkeleton';
 
 const DailyChallengePage = () => {
-  const [challenge, setChallenge] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
 
-  useEffect(() => {
-    dailyChallengeApi.getToday()
-      .then((res) => {
-        setChallenge(res.data.data);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: challenge = null, isLoading: loading } = useQuery({
+    queryKey: ['daily-challenge'],
+    queryFn: async () => {
+      const res = await dailyChallengeApi.getToday();
+      return res.data?.data || null;
+    },
+  });
 
   const handleSelect = (qId, option) => {
     if (submitted) return;

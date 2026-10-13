@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { subjectApi, mockTestApi } from '../../services/api';
 import {
   BookOpen,
@@ -39,8 +40,6 @@ const MockTestConfig = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [difficulty, setDifficulty] = useState('ALL');
@@ -48,52 +47,46 @@ const MockTestConfig = () => {
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [negativeMarking, setNegativeMarking] = useState(true);
 
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Initial load of subjects
+  // Cached subjects query via TanStack React Query
+  const { data: subjects = [], isLoading: loading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: async () => {
+      const res = await subjectApi.getAllActive();
+      return res.data?.data || [];
+    },
+  });
+
+  // Cached topics query per selected subject
+  const { data: topics = [] } = useQuery({
+    queryKey: ['topics', selectedSubjectId],
+    queryFn: async () => {
+      if (!selectedSubjectId) return [];
+      const res = await subjectApi.getTopics(selectedSubjectId);
+      return res.data?.data || [];
+    },
+    enabled: !!selectedSubjectId,
+  });
+
+  // Handle URL params or default to first subject once subjects load
   useEffect(() => {
-    subjectApi.getAllActive()
-      .then((res) => {
-        const subs = res.data.data || [];
-        setSubjects(subs);
+    if (subjects.length > 0 && selectedSubjectId === null) {
+      const paramSubId = searchParams.get('subjectId');
+      const paramTopicId = searchParams.get('topicId');
 
-        const paramSubId = searchParams.get('subjectId');
-        const paramTopicId = searchParams.get('topicId');
-
-        if (paramSubId) {
-          const found = subs.find((s) => s.id === parseInt(paramSubId));
-          if (found) {
-            setSelectedSubjectId(found.id);
-            if (paramTopicId) setSelectedTopicId(paramTopicId);
-          }
-        } else if (subs.length > 0) {
-          setSelectedSubjectId(subs[0].id);
+      if (paramSubId) {
+        const found = subjects.find((s) => s.id === parseInt(paramSubId));
+        if (found) {
+          setSelectedSubjectId(found.id);
+          if (paramTopicId) setSelectedTopicId(paramTopicId);
         }
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Failed to load available subjects.');
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Fetch topics whenever selectedSubjectId changes
-  useEffect(() => {
-    if (selectedSubjectId) {
-      subjectApi.getTopics(selectedSubjectId)
-        .then((res) => {
-          setTopics(res.data.data || []);
-        })
-        .catch((err) => {
-          console.error(err);
-          setTopics([]);
-        });
-    } else {
-      setTopics([]);
+      } else {
+        setSelectedSubjectId(subjects[0].id);
+      }
     }
-  }, [selectedSubjectId]);
+  }, [subjects, selectedSubjectId, searchParams]);
 
   const handleStart = async () => {
     if (!selectedSubjectId) {

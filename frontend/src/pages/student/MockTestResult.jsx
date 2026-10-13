@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mockTestApi, bookmarkApi } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -24,47 +25,52 @@ const COLORS = ['#10b981', '#f43f5e', '#94a3b8']; // Correct (Emerald), Wrong (R
 const MockTestResult = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [bookmarkedMap, setBookmarkedMap] = useState({});
   const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const [filterMode, setFilterMode] = useState('ALL'); // 'ALL', 'INCORRECT', 'CORRECT', 'SKIPPED'
 
+  const { data: result = null, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['mock-result', id],
+    queryFn: async () => {
+      const res = await mockTestApi.getResult(id);
+      return res.data?.data || null;
+    },
+    enabled: !!id,
+  });
+
+  const error = queryError ? 'Failed to fetch detailed test results.' : '';
+
   useEffect(() => {
-    mockTestApi.getResult(id)
-      .then((res) => {
-        const data = res.data.data;
-        setResult(data);
+    if (result) {
+      const bMap = {};
+      result.questions?.forEach((q) => {
+        if (q.isBookmarked) bMap[q.questionId] = true;
+      });
+      setBookmarkedMap(bMap);
 
-        // Prepopulate bookmarks map
-        const bMap = {};
-        data.questions.forEach((q) => {
-          if (q.isBookmarked) bMap[q.questionId] = true;
+      if (result.percentage >= 70) {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
         });
-        setBookmarkedMap(bMap);
+      }
+    }
+  }, [result]);
 
-        // Fire confetti on high score
-        if (data.percentage >= 70) {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Failed to fetch detailed test results.');
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+  const toggleBookmarkMutation = useMutation({
+    mutationFn: (questionId) => bookmarkApi.toggle(questionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
+  });
 
   const handleToggleBookmark = async (questionId) => {
     try {
-      const res = await bookmarkApi.toggle(questionId);
-      const isNowBookmarked = res.data.data.bookmarked;
+      const res = await toggleBookmarkMutation.mutateAsync(questionId);
+      const isNowBookmarked = res.data?.data?.bookmarked;
       setBookmarkedMap((prev) => ({ ...prev, [questionId]: isNowBookmarked }));
     } catch (err) {
       console.error(err);

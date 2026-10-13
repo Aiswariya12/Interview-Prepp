@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
+import { queryClient } from '../queryClient';
 
 const AuthContext = createContext(null);
 
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userInfo);
       localStorage.setItem('interviewprep_token', authToken);
       localStorage.setItem('interviewprep_user', JSON.stringify(userInfo));
+      queryClient.clear();
       return { success: true, user: userInfo };
     } catch (err) {
       let msg = err.response?.data?.message;
@@ -97,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('interviewprep_token');
     localStorage.removeItem('interviewprep_user');
+    queryClient.clear();
   };
 
   const isAuthenticated = !!token && !!user;

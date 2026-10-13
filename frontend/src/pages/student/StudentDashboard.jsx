@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, dailyChallengeApi, subjectApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import AIStudyCoachModal from '../../components/AIStudyCoachModal';
@@ -30,42 +31,35 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [dashboard, setDashboard] = useState(null);
-  const [dailyChallenge, setDailyChallenge] = useState(null);
-  const [subjects, setSubjects] = useState([]);
   const [selectedSubjectNoteFilter, setSelectedSubjectNoteFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
   const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  const { data: dashboard = null, isLoading: dashLoading } = useQuery({
+    queryKey: ['student-dashboard'],
+    queryFn: async () => {
+      const res = await analyticsApi.getStudentDashboard();
+      return res.data?.data || null;
+    },
+  });
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [dashRes, challengeRes, subRes] = await Promise.allSettled([
-        analyticsApi.getStudentDashboard(),
-        dailyChallengeApi.getToday(),
-        subjectApi.getAllActive(),
-      ]);
+  const { data: dailyChallenge = null, isLoading: challengeLoading } = useQuery({
+    queryKey: ['daily-challenge'],
+    queryFn: async () => {
+      const res = await dailyChallengeApi.getToday();
+      return res.data?.data || null;
+    },
+  });
 
-      if (dashRes.status === 'fulfilled') {
-        setDashboard(dashRes.value.data.data);
-      }
-      if (challengeRes.status === 'fulfilled') {
-        setDailyChallenge(challengeRes.value.data.data);
-      }
-      if (subRes.status === 'fulfilled') {
-        setSubjects(subRes.value.data?.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: subjects = [], isLoading: subLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: async () => {
+      const res = await subjectApi.getAllActive();
+      return res.data?.data || [];
+    },
+  });
+
+  const loading = dashLoading || challengeLoading || subLoading;
 
   if (loading) {
     return <StudentDashboardSkeleton />;

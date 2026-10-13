@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { mockTestApi } from '../../services/api';
 import {
   LineChart,
@@ -15,19 +16,14 @@ import TestHistorySkeleton from '../../components/skeletons/TestHistorySkeleton'
 
 const TestHistory = () => {
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    mockTestApi.getHistory()
-      .then((res) => {
-        setHistory(res.data.data || []);
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: history = [], isLoading: loading } = useQuery({
+    queryKey: ['test-history'],
+    queryFn: async () => {
+      const res = await mockTestApi.getHistory();
+      return res.data?.data || [];
+    },
+  });
 
   if (loading) {
     return <TestHistorySkeleton />;

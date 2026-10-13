@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { subjectApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -30,15 +31,14 @@ const iconMap = {
 const LandingPage = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [subjects, setSubjects] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    subjectApi.getAllActive()
-      .then((res) => { setSubjects(res.data.data || []); })
-      .catch((err) => { console.error('Failed to load subjects:', err); })
-      .finally(() => { setLoading(false); });
-  }, []);
+  const { data: subjects = [], isLoading: loading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: async () => {
+      const res = await subjectApi.getAllActive();
+      return res.data?.data || [];
+    },
+  });
 
   return (
     <div className="bg-slate-50 min-h-screen">

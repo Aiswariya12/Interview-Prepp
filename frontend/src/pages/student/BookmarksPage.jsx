@@ -1,31 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookmarkApi } from '../../services/api';
 import { Bookmark, Sparkles, Trash2, CheckCircle2, ChevronDown, ChevronUp, Code, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BookmarksSkeleton from '../../components/skeletons/BookmarksSkeleton';
 
 const BookmarksPage = () => {
-  const [bookmarks, setBookmarks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState(null);
 
-  useEffect(() => {
-    fetchBookmarks();
-  }, []);
+  const { data: bookmarks = [], isLoading: loading } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: async () => {
+      const res = await bookmarkApi.getAll();
+      return res.data?.data || [];
+    },
+  });
 
-  const fetchBookmarks = () => {
-    bookmarkApi.getAll()
-      .then((res) => {
-        setBookmarks(res.data.data || []);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const removeBookmarkMutation = useMutation({
+    mutationFn: (questionId) => bookmarkApi.toggle(questionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
+  });
 
   const handleRemove = async (questionId) => {
     try {
-      await bookmarkApi.toggle(questionId);
-      setBookmarks((prev) => prev.filter((b) => b.question.id !== questionId));
+      await removeBookmarkMutation.mutateAsync(questionId);
     } catch (err) {
       console.error(err);
     }

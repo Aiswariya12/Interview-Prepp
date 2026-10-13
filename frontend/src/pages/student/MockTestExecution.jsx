@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { mockTestApi } from '../../services/api';
 import {
   Clock,
@@ -18,6 +19,7 @@ import {
 const MockTestExecution = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [test, setTest] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -146,6 +148,9 @@ const MockTestExecution = () => {
         timeTakenSeconds: timeTaken,
         answers: answerList,
       });
+
+      queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['test-history'] });
 
       navigate(`/mock/results/${id}`, { replace: true });
     } catch (err) {
