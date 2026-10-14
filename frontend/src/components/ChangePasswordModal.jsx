@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import {
   KeyRound,
@@ -110,6 +111,7 @@ const ChangePasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
 
     if (res.success) {
       setSuccess('Password updated successfully! You can now log in with your new password.');
+      toast.success('Password updated successfully!');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -117,7 +119,9 @@ const ChangePasswordModal = ({ isOpen, onClose, defaultEmail = '' }) => {
         onClose();
       }, 2200);
     } else {
-      setError(res.error || 'Incorrect old password. Please enter correct old password.');
+      const errMsg = res.error || 'Incorrect old password. Please enter correct old password.';
+      setError(errMsg);
+      toast.error(errMsg);
     }
   };
 

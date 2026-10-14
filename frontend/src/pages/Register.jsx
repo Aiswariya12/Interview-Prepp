@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 import { GraduationCap, Lock, Mail, User, Building, BookOpen, Calendar, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -30,6 +31,7 @@ const Register = () => {
 
     const res = await register(formData);
     if (res.success) {
+      toast.success('Account created successfully! Please sign in.');
       navigate('/login', {
         state: {
           registeredEmail: formData.email,
@@ -38,6 +40,7 @@ const Register = () => {
       });
     } else {
       setError(res.error);
+      toast.error(res.error || 'Registration failed. Please check your details.');
     }
   };
 

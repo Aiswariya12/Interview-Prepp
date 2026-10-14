@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { adminApi, subjectApi, questionApi } from '../../services/api';
 import {
   ShieldAlert,
@@ -426,6 +427,7 @@ const AdminDashboard = () => {
 
   const showToast = (msg) => {
     setFeedback(msg);
+    toast.success(msg);
     setTimeout(() => setFeedback(''), 3500);
   };
 

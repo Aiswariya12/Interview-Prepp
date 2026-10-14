@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { mockTestApi, bookmarkApi } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -72,8 +73,14 @@ const MockTestResult = () => {
       const res = await toggleBookmarkMutation.mutateAsync(questionId);
       const isNowBookmarked = res.data?.data?.bookmarked;
       setBookmarkedMap((prev) => ({ ...prev, [questionId]: isNowBookmarked }));
+      if (isNowBookmarked) {
+        toast.success('Question saved to bookmarks!');
+      } else {
+        toast.info('Question removed from bookmarks');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Failed to update bookmark');
     }
   };
 

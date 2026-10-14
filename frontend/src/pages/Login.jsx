@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap, Lock, Mail, ArrowRight, AlertCircle, ShieldAlert, UserCheck, CheckCircle2 } from 'lucide-react';
 
@@ -24,12 +25,15 @@ const Login = () => {
     const cleanPassword = password ? password.trim() : '';
 
     if (!cleanEmail || !cleanPassword) {
-      setError('Please provide both email and password.');
+      const msg = 'Please provide both email and password.';
+      setError(msg);
+      toast.warning(msg);
       return;
     }
 
     const res = await login(cleanEmail, cleanPassword);
     if (res.success) {
+      toast.success(`Welcome back, ${res.user?.fullName || res.user?.name || 'User'}!`);
       if (res.user.role === 'ROLE_ADMIN') {
         navigate('/admin');
       } else {
@@ -37,6 +41,7 @@ const Login = () => {
       }
     } else {
       setError(res.error);
+      toast.error(res.error || 'Login failed. Please check your credentials.');
     }
   };
 

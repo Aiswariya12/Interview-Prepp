@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { bookmarkApi } from '../../services/api';
 import { Bookmark, Sparkles, Trash2, CheckCircle2, ChevronDown, ChevronUp, Code, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -21,6 +22,7 @@ const BookmarksPage = () => {
     mutationFn: (questionId) => bookmarkApi.toggle(questionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      toast.info('Bookmark removed from your bank');
     },
   });
 
@@ -29,6 +31,7 @@ const BookmarksPage = () => {
       await removeBookmarkMutation.mutateAsync(questionId);
     } catch (err) {
       console.error(err);
+      toast.error('Failed to remove bookmark');
     }
   };
 

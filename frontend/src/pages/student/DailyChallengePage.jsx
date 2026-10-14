@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { dailyChallengeApi } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { Calendar, Flame, CheckCircle2, XCircle, Sparkles, Code, ArrowRight, RotateCcw } from 'lucide-react';
@@ -35,6 +36,7 @@ const DailyChallengePage = () => {
 
     setScore(correct);
     setSubmitted(true);
+    toast.success(`Daily Sprint submitted! You scored ${correct}/${challenge.questions.length}`);
 
     if (correct >= 3) {
       confetti({

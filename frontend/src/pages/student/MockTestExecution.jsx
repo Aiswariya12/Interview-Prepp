@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { mockTestApi } from '../../services/api';
 import {
   Clock,
@@ -12,7 +13,6 @@ import {
   Flag,
   RotateCcw,
   Send,
-  HelpCircle,
   Code
 } from 'lucide-react';
 
@@ -29,7 +29,7 @@ const MockTestExecution = () => {
 
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -130,9 +130,10 @@ const MockTestExecution = () => {
   };
 
   const handleSubmit = async (isAuto = false) => {
-    if (submitting) return;
+    if (submitting || isSubmitted) return;
+    if (timerRef.current) clearInterval(timerRef.current);
     setSubmitting(true);
-    setConfirmModalOpen(false);
+    setError('');
 
     try {
       const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000);
@@ -152,10 +153,17 @@ const MockTestExecution = () => {
       queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['test-history'] });
 
-      navigate(`/mock/results/${id}`, { replace: true });
+      setSubmitting(false);
+      setIsSubmitted(true);
+      toast.success('Examination submitted successfully!');
+
+      setTimeout(() => {
+        navigate(`/mock/results/${id}`, { replace: true });
+      }, 1500);
     } catch (err) {
       console.error(err);
       setError('Error submitting test. Please try again.');
+      toast.error('Error submitting test. Please try again.');
       setSubmitting(false);
     }
   };
@@ -234,11 +242,26 @@ const MockTestExecution = () => {
             </div>
 
             <button
-              onClick={() => setConfirmModalOpen(true)}
-              className="px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+              onClick={() => handleSubmit(false)}
+              disabled={submitting || isSubmitted}
+              className="px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>Submit</span>
+              {submitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Submitting...</span>
+                </>
+              ) : isSubmitted ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Submitted</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Submit</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -298,12 +321,13 @@ const MockTestExecution = () => {
                   <button
                     key={letter}
                     type="button"
+                    disabled={submitting || isSubmitted}
                     onClick={() => handleSelectOption(currentQ.mockQuestionId, letter)}
                     className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all ${
                       isSelected
                         ? 'border-indigo-600 bg-indigo-50/70 shadow-xs ring-2 ring-indigo-600/20'
                         : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
-                    }`}
+                    } ${submitting || isSubmitted ? 'opacity-80 cursor-not-allowed' : ''}`}
                   >
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
@@ -372,10 +396,26 @@ const MockTestExecution = () => {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setConfirmModalOpen(true)}
-                  className="flex-1 sm:flex-none justify-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-1 transition-colors cursor-pointer text-center"
+                  disabled={submitting || isSubmitted}
+                  onClick={() => handleSubmit(false)}
+                  className="flex-1 sm:flex-none justify-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed text-center"
                 >
-                  Submit Examination <Send className="w-3.5 h-3.5" />
+                  {submitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Submitting Examination...</span>
+                    </>
+                  ) : isSubmitted ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Submitted Successfully</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit Examination</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -440,68 +480,28 @@ const MockTestExecution = () => {
 
           <div className="pt-4 border-t border-slate-100">
             <button
-              onClick={() => setConfirmModalOpen(true)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5"
+              onClick={() => handleSubmit(false)}
+              disabled={submitting || isSubmitted}
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
             >
-              Finish &amp; Submit Test
+              {submitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Submitting Test...</span>
+                </>
+              ) : isSubmitted ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Submitted Successfully</span>
+                </>
+              ) : (
+                <span>Finish &amp; Submit Test</span>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {confirmModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2">
-                <HelpCircle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Confirm Test Submission</h3>
-              <p className="text-xs text-slate-500">
-                Are you sure you want to end this mock test? Once submitted, the Spring Boot engine will automatically evaluate your score.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="p-2 bg-white rounded-xl shadow-2xs">
-                <p className="text-lg font-bold text-emerald-600">{answeredCount}</p>
-                <p className="text-[10px] text-slate-500">Answered</p>
-              </div>
-              <div className="p-2 bg-white rounded-xl shadow-2xs">
-                <p className="text-lg font-bold text-amber-600">{markedCount}</p>
-                <p className="text-[10px] text-slate-500">Marked</p>
-              </div>
-              <div className="p-2 bg-white rounded-xl shadow-2xs">
-                <p className="text-lg font-bold text-slate-400">{unansweredCount}</p>
-                <p className="text-[10px] text-slate-500">Skipped</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Resume Examination
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => handleSubmit(false)}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-200 flex items-center justify-center gap-1.5"
-              >
-                {submitting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>Yes, Submit Now</>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
