@@ -9,6 +9,7 @@ import BookmarksSkeleton from '../../components/skeletons/BookmarksSkeleton';
 const BookmarksPage = () => {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState(null);
+  const [showAllBookmarks, setShowAllBookmarks] = useState(false);
 
   const { data: bookmarks = [], isLoading: loading } = useQuery({
     queryKey: ['bookmarks'],
@@ -42,17 +43,43 @@ const BookmarksPage = () => {
   return (
     <div className="min-h-screen bg-slate-50/60 py-8 sm:py-10">
       <div className="max-w-5xl mx-auto px-3.5 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold mb-1 border border-amber-200">
-            <Bookmark className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            <span>Saved Questions Bank</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold mb-1 border border-amber-200">
+              <Bookmark className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>Saved Questions Bank</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Bookmarked Questions
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500">
+              {bookmarks.length > 5
+                ? showAllBookmarks
+                  ? `Showing all ${bookmarks.length} saved questions`
+                  : `Showing recent 5 of ${bookmarks.length} saved questions`
+                : 'Review tricky interview questions, edge cases, and in-depth conceptual explanations.'}
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Bookmarked Questions
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Review tricky interview questions, edge cases, and in-depth conceptual explanations.
-          </p>
+
+          {bookmarks.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllBookmarks(!showAllBookmarks)}
+              className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs"
+            >
+              {showAllBookmarks ? (
+                <>
+                  <span>Show Recent 5 Only</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <span>View All ({bookmarks.length})</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {bookmarks.length === 0 ? (
@@ -71,7 +98,7 @@ const BookmarksPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {bookmarks.map((b) => {
+            {(showAllBookmarks ? bookmarks : bookmarks.slice(0, 5)).map((b) => {
               const q = b.question;
               const isExpanded = expandedId === b.id;
               const options = [
@@ -170,6 +197,28 @@ const BookmarksPage = () => {
                 </div>
               );
             })}
+
+            {bookmarks.length > 5 && (
+              <div className="pt-2 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAllBookmarks(!showAllBookmarks)}
+                  className="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  {showAllBookmarks ? (
+                    <>
+                      <span>Show Recent 5 Only</span>
+                      <ChevronUp className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      <span>View All Saved Questions ({bookmarks.length})</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

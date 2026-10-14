@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mockTestApi } from '../../services/api';
@@ -11,11 +11,22 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { History, BookOpen, Clock, ArrowRight, Award, TrendingUp, Calendar } from 'lucide-react';
+import {
+  History,
+  BookOpen,
+  Clock,
+  ArrowRight,
+  Award,
+  TrendingUp,
+  Calendar,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 import TestHistorySkeleton from '../../components/skeletons/TestHistorySkeleton';
 
 const TestHistory = () => {
   const navigate = useNavigate();
+  const [showAll, setShowAll] = useState(false);
 
   const { data: history = [], isLoading: loading } = useQuery({
     queryKey: ['test-history'],
@@ -114,8 +125,37 @@ const TestHistory = () => {
 
         {/* History Table */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-6 pb-4 border-b border-slate-100">
-            <h3 className="text-base font-bold text-slate-900">All Completed Mock Assessments</h3>
+          <div className="p-6 pb-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">All Completed Mock Assessments</h3>
+              {history.length > 0 && (
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {showAll
+                    ? `Showing all ${history.length} assessments`
+                    : `Showing recent ${Math.min(5, history.length)} of ${history.length} assessments`}
+                </p>
+              )}
+            </div>
+
+            {history.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(!showAll)}
+                className="px-3.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                {showAll ? (
+                  <>
+                    <span>Show Recent 5 Only</span>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </>
+                ) : (
+                  <>
+                    <span>View All ({history.length})</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {history.length === 0 ? (
@@ -125,67 +165,91 @@ const TestHistory = () => {
               <p className="text-xs text-slate-400">Your examination records will be logged here as you take tests.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
-                  <tr>
-                    <th className="px-6 py-3.5">Subject &amp; Scope</th>
-                    <th className="px-6 py-3.5">Difficulty</th>
-                    <th className="px-6 py-3.5">Questions</th>
-                    <th className="px-6 py-3.5">Score</th>
-                    <th className="px-6 py-3.5">Accuracy</th>
-                    <th className="px-6 py-3.5">Date</th>
-                    <th className="px-6 py-3.5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {history.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-slate-900 block">{t.subjectName}</span>
-                        <span className="text-[11px] text-slate-400 font-normal">{t.topicName}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
-                          {t.difficulty}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {t.totalQuestions} Questions ({t.correctCount}C / {t.wrongCount}W)
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`font-bold text-sm ${
-                            t.percentage >= 70
-                              ? 'text-emerald-600'
-                              : t.percentage >= 40
-                              ? 'text-amber-600'
-                              : 'text-rose-600'
-                          }`}
-                        >
-                          {t.percentage}%
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">{t.score}/{t.maxScore} pts</span>
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-slate-700">
-                        {t.accuracy}%
-                      </td>
-                      <td className="px-6 py-4 text-slate-400 text-[11px]">
-                        {new Date(t.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => navigate(`/mock/results/${t.id}`)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 font-semibold transition-colors"
-                        >
-                          View Analysis
-                        </button>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-3.5">Subject &amp; Scope</th>
+                      <th className="px-6 py-3.5">Difficulty</th>
+                      <th className="px-6 py-3.5">Questions</th>
+                      <th className="px-6 py-3.5">Score</th>
+                      <th className="px-6 py-3.5">Accuracy</th>
+                      <th className="px-6 py-3.5">Date</th>
+                      <th className="px-6 py-3.5 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {(showAll ? history : history.slice(0, 5)).map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-slate-900 block">{t.subjectName}</span>
+                          <span className="text-[11px] text-slate-400 font-normal">{t.topicName}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                            {t.difficulty}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600">
+                          {t.totalQuestions} Questions ({t.correctCount}C / {t.wrongCount}W)
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`font-bold text-sm ${
+                              t.percentage >= 70
+                                ? 'text-emerald-600'
+                                : t.percentage >= 40
+                                ? 'text-amber-600'
+                                : 'text-rose-600'
+                            }`}
+                          >
+                            {t.percentage}%
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">{t.score}/{t.maxScore} pts</span>
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-slate-700">
+                          {t.accuracy}%
+                        </td>
+                        <td className="px-6 py-4 text-slate-400 text-[11px]">
+                          {new Date(t.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => navigate(`/mock/results/${t.id}`)}
+                            className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 font-semibold transition-colors cursor-pointer"
+                          >
+                            View Analysis
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {history.length > 5 && (
+                <div className="p-4 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAll(!showAll)}
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    {showAll ? (
+                      <>
+                        <span>Show Recent 5 Only</span>
+                        <ChevronUp className="w-4 h-4" />
+                      </>
+                    ) : (
+                      <>
+                        <span>View All Completed Tests ({history.length})</span>
+                        <ChevronDown className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
