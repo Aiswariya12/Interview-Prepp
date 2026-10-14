@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 import { adminApi, subjectApi, questionApi } from '../../services/api';
+import adminProfilePic from '../../assets/WhatsApp Image 2026-10-14 at 4.52.51 PM.jpeg';
 import {
   ShieldAlert,
   Users,
@@ -52,6 +54,7 @@ import {
 } from 'recharts';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState('interviews'); // 'interviews', 'students', 'questions', 'subjects'
@@ -439,18 +442,34 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-slate-50/70 pb-20">
       {/* Top Admin Header */}
       <div className="bg-slate-900 text-white py-8 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-400/30">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              <span>Administrator Control Center</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4 sm:gap-5">
+            {/* Admin Profile Photo */}
+            <div className="relative shrink-0">
+              <img
+                src={adminProfilePic}
+                alt="Admin Profile"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover object-[center_25%] border-2 border-indigo-400/60 shadow-xl ring-4 ring-indigo-500/20"
+              />
+              <span
+                className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full"
+                title="Active Administrator"
+              />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              InterviewPrep Management Portal
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
-              Manage question banks, subjects, topics, explanations, and monitor student performance.
-            </p>
+
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-400/30">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Administrator Control Center</span>
+                {user?.name && <span className="text-indigo-200 font-medium">• {user.name}</span>}
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                InterviewPrep Management Portal
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400">
+                Manage question banks, subjects, topics, explanations, and monitor student performance.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">

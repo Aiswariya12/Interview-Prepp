@@ -18,6 +18,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
+import adminProfilePic from '../assets/WhatsApp Image 2026-10-14 at 4.52.51 PM.jpeg';
 
 const Navbar = () => {
   const { user, isAuthenticated, isAdmin, isStudent, logout } = useAuth();
@@ -154,9 +155,17 @@ const Navbar = () => {
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                      {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                    </div>
+                    {isAdmin ? (
+                      <img
+                        src={adminProfilePic}
+                        alt="Admin Profile"
+                        className="w-8 h-8 rounded-full object-cover object-[center_25%] border border-indigo-300 shadow-xs"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
                     <div className="text-left text-xs">
                       <p className="font-semibold text-slate-800 leading-tight truncate max-w-[120px]">
                         {user?.name || 'User'}
@@ -172,12 +181,21 @@ const Navbar = () => {
                       onMouseLeave={() => setUserDropdownOpen(false)}
                       className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50"
                     >
-                      <div className="px-4 py-2 border-b border-slate-100">
-                        <p className="text-xs font-semibold text-slate-900 truncate">{user?.name}</p>
-                        <p className="text-[11px] text-indigo-600 font-medium truncate">{isAdmin ? 'Administrator' : 'Student Account'}</p>
-                        {user?.college && (
-                          <p className="text-[11px] text-slate-500 mt-0.5 truncate">{user.college}</p>
+                      <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2.5">
+                        {isAdmin && (
+                          <img
+                            src={adminProfilePic}
+                            alt="Admin Profile"
+                            className="w-9 h-9 rounded-full object-cover object-[center_25%] border border-indigo-300 shadow-xs shrink-0"
+                          />
                         )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-900 truncate">{user?.name}</p>
+                          <p className="text-[11px] text-indigo-600 font-medium truncate">{isAdmin ? 'Administrator' : 'Student Account'}</p>
+                          {user?.college && (
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">{user.college}</p>
+                          )}
+                        </div>
                       </div>
 
                       {isAdmin && (
@@ -270,9 +288,17 @@ const Navbar = () => {
                 {/* User Info & Streak Badge */}
                 <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-50 to-indigo-50/50 border border-slate-200/80 mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                      {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                    </div>
+                    {isAdmin ? (
+                      <img
+                        src={adminProfilePic}
+                        alt="Admin Profile"
+                        className="w-10 h-10 rounded-full object-cover object-[center_25%] border-2 border-indigo-400 shadow-xs shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 text-sm truncate">{user?.name || 'Candidate'}</p>
                       <p className="text-[11px] text-indigo-600 font-semibold truncate">
